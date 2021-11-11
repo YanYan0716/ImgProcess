@@ -6,7 +6,7 @@ reference：https://www.youtube.com/watch?v=qKWPBzRD-U0&list=PLuh62Q4Sv7BUf60vkj
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-
+from PIL import Image
 
 img = cv2.imread('./data/IMG1.jpg')
 print(img.shape)
@@ -232,3 +232,35 @@ plt.subplot(133)
 plt.title('hist equal from myself')
 plt.imshow(cv2.cvtColor(img_self, cv2.COLOR_YCrCb2RGB))
 plt.show()
+
+
+# filter
+
+def ImgFilter(img, filter):
+    height, width = img.shape
+    img_ = np.zeros(shape=(height, width), dtype=np.uint8)
+    for i in range(height-1):
+        for j in range(width-1):
+            left = i-1
+            left = np.clip(left, 0, height-3)
+            right = left+3
+            top = j-1
+            top = np.clip(top, 0, width-3)
+            bottom = top+3
+            img_[i, j] = int(np.sum(img[left:right, top:bottom]*filter))
+    return img_
+
+
+img = cv2.imread('./data/IMG1.jpg')
+gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+
+filter = np.array([[-1., -1., -1.], [0., 0., 0.], [1., 1., 1.]])
+# filter = np.array([[0.11, 0.11, 0.11], [0.11, 0.11, 0.11], [0.11, 0.11, 0.11]])
+
+img = ImgFilter(gray_img, filter)
+_, img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
+img_ = Image.fromarray(img)
+plt.imshow(img_, cmap='gray')
+plt.show()
+# cv2.imshow('sd', img)
