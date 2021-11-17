@@ -33,14 +33,14 @@ def ForRotate(img, degree):
             new_img[new_y, new_x, :] = img[i, j, :]
     return new_img
 
-#
-# img = cv2.imread('./data/IMG1.jpg')
-# img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-# img = ForRotate(img, 30)
-# print(img.shape)
-# plt.imshow(img)
-# plt.show()
-#
+
+img = cv2.imread('./data/IMG1.jpg')
+img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+img = ForRotate(img, 30)
+print(img.shape)
+plt.imshow(img)
+plt.show()
+
 
 from interval import Interval
 def BilinearInterpolation(img, x, y, h_range, w_range):

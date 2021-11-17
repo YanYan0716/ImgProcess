@@ -52,9 +52,9 @@ gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 ret, th = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY)
 
 
-# cv2.imshow('thresh', th)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
+cv2.imshow('thresh', th)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 
 
 # 手写代码实现二值图
