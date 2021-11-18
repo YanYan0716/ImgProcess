@@ -148,3 +148,34 @@ plt.subplot(326)
 plt.title('sobel vertical by myself')
 plt.imshow(imgy_self, cmap='gray')
 plt.show()
+
+
+'''MedianFilter for pepper and salt noise==========================='''
+
+
+def MedianFilter(image, kernel_size):
+    H, W = image.shape
+    new_img = np.zeros(shape=(H, W))
+    radius = int((kernel_size - 1) / 2)
+
+    for h in range(H):
+        for w in range(W):
+            left = np.clip(h - radius, 1, H - (kernel_size - radius) - 1)
+            top = np.clip(w - radius, 1, W - (kernel_size - radius) - 1)
+            new_img[h, w] = int(np.median(image[left:left+kernel_size, top:top+kernel_size]))
+    new_img = np.array(np.clip(new_img, 0, 255), dtype=np.uint8)
+    return new_img
+
+
+fig, ax = plt.subplots(1, 3, figsize=(10, 5), num='median')
+img = cv2.cvtColor(cv2.imread('./data/IMG3.png'), cv2.COLOR_BGR2RGB)
+plt.subplot(121)
+plt.title('papper and salt')
+plt.imshow(img)
+
+img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+img_ = MedianFilter(img, kernel_size=3)
+plt.subplot(122)
+plt.title('papper and salt with median filter')
+plt.imshow(Image.fromarray(img_), cmap='gray')
+plt.show()
