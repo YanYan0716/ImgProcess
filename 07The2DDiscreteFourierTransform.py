@@ -7,6 +7,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import cv2
 
+
 def basicfunction(m, n):
     '''
     傅里叶变换的基本函数
