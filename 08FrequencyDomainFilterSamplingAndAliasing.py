@@ -66,9 +66,9 @@ def idealfilter(im, edges, type='lp'):
         mask[rM - edges[0]:rM + edges[0], rN - edges[1]:rN + edges[1]] = 1
     mask = np.fft.fftshift(mask)
 
-    # if type == 'hp':
-    #     mask = mask.astype(np.bool)
-    #     mask = ~mask
+    if type == 'hp':
+        mask = mask.astype(np.bool)
+        mask = ~mask
 
     if type == 'gausslp':
         h = gauss_filter(kernel_size=[M, N], sigma=edges[0])
@@ -105,11 +105,6 @@ def idealfilter(im, edges, type='lp'):
     ftout_ = np.fft.ifftshift(ftout)
     out = np.abs(np.fft.ifft2(ftout_))
     plt.imshow(out, cmap='gray')
-
-    # plt.subplot(326)
-    # plt.title('Spatial filter co to mask')
-    # out = np.abs(np.fft.ifft2(mask))
-    # plt.imshow(out, cmap='gray')
     plt.show()
 
     x, y = np.arange(int(N)), np.arange(int(M))
@@ -152,3 +147,36 @@ f = np.ones(shape=(30, 30))/900
 filterft(f)
 
 idealfilter(im, [20], 'gausslp')
+
+hp = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]])-np.ones([3, 3])/9
+filterft(hp)
+
+hp = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]]) - np.array([[1, 2, 1], [2, 4, 2], [1, 2, 1]])/16
+filterft(hp)
+
+
+idealfilter(im, [5, 5], 'hp')
+
+
+im = cv2.cvtColor(cv2.imread('./data/IMG9.JPG'), cv2.COLOR_BGR2GRAY)
+fig, ax = plt.subplots(2, 2, figsize=(8, 8), num='filter with images')
+plt.subplot(221)
+plt.title('original image')
+plt.imshow(im, cmap='gray')
+
+downsample = im[::4, ::4]
+plt.subplot(222)
+plt.title('downsampling with anti-aliasing')
+plt.imshow(downsample, cmap='gray')
+
+plt.subplot(223)
+plt.title('blur image')
+kernel = np.ones([9, 9])/81
+blur = cv2.filter2D(im, -1, kernel=kernel)
+plt.imshow(blur, cmap='gray')
+
+downsample2 = blur[::4, ::4]
+plt.subplot(224)
+plt.title('downsampling from blur')
+plt.imshow(downsample2, cmap='gray')
+plt.show()
