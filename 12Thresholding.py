@@ -91,7 +91,9 @@ def adaptiveThresholding(img, kernel_size):
                 P = P/((bottom-top+1)*(right-left+1))
                 mean = np.sum(np.multiply(intensity_list, P))
                 std_dev = np.sqrt(np.sum(np.multiply(np.power(intensity_list - mean, 2), P)))
-                # 此处相当于调节阈值，原文中有多种方法，要选择适合自己的一种
+                # 此处相当于调节阈值，原文中有多种方法，要选择适合自己的一种:
+                # if img[i, j] < int(mean + std_dev):
+                # if img[i, j] < int(mean + 2 * std_dev):
                 if img[i, j] < int(mean):
                     new_img[i, j] = 0
     return new_img
