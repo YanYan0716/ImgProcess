@@ -89,8 +89,15 @@ def edgedetect(img, type='canny'):
     return edge_img
 
 
-def snake(img):
-    im_h, im_w, imc = img.shape
+def snake(img, snake, w_edge=0, w_line=1, coordinates='rc'):
+    snake_xy = snake
+    x, y = snake_xy[:, 0].astype(np.float), snake_xy[:, 1].astype(np.float)
+    convergence_order = 10
+    n = len(x)
+    xsave = np.empty((convergence_order, n))
+    ysave = np.empty((convergence_order, n))
+
+
     edge_img = edgedetect(img)
     res = RectBivariateSpline(
         np.arange(edge_img.shape[1]),
@@ -100,6 +107,7 @@ def snake(img):
         ky=2,
         s=0
     )
+
     X, Y = np.meshgrid(np.arange(0, edge_img.shape[0], 1), np.arange(0, edge_img.shape[1], 1))
     fig, ax = plt.subplots(nrows=1, ncols=2, subplot_kw={'projection': '3d'})
     ax[0].plot_wireframe(X, Y, edge_img[X, Y], color='r')
@@ -113,27 +121,24 @@ def snake(img):
     return img
 
 
-# def click(event):
-#     '''
-#     鼠标点击事件
-#     :param event:
-#     :return:
-#     '''
-#     (w, h)
-#     pass
-
-
-from skimage.draw import circle_perimeter
 img = cv2.imread('./data/IMG14.jpg')
 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-snake(img)
 
-import numpy as np
-from scipy.interpolate import RectBivariateSpline
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+s = np.linspace(0, 2*np.pi, 100)
+init = 50 * np.array([np.sin(s), np.cos(s)]).T
+plt.figure(figsize=(5, 5), num='a origin circle')
+plt.plot(init.T[0], init.T[1], linewidth=2, color='red')
+plt.show()
 
-# Regularly-spaced, coarse grid
+
+snake(img, init, w_edge=0, w_line=1, coordinates='rc')
+#
+# import numpy as np
+# from scipy.interpolate import RectBivariateSpline
+# import matplotlib.pyplot as plt
+# from mpl_toolkits.mplot3d import Axes3D
+# #
+# # # Regularly-spaced, coarse grid
 # dx, dy = 0.4, 0.4
 # xmax, ymax = 2, 4
 # x = np.arange(-xmax, xmax, dx)
@@ -143,12 +148,13 @@ from mpl_toolkits.mplot3d import Axes3D
 #
 # interp_spline = RectBivariateSpline(y, x, Z)
 #
-# # Regularly-spaced, fine grid
-# dx2, dy2 = 0.4, 0.4
+# # # Regularly-spaced, fine grid
+# dx2, dy2 = 0.1, 0.1
 # x2 = np.arange(-xmax, xmax, dx2)
 # y2 = np.arange(-ymax, ymax, dy2)
-# X2, Y2 = np.meshgrid(x2,y2)
+# X2, Y2 = np.meshgrid(x2, y2)
 # Z2 = interp_spline(y2, x2)
+# np.set_printoptions(suppress=True)
 #
 # fig, ax = plt.subplots(nrows=1, ncols=2, subplot_kw={'projection': '3d'})
 # ax[0].plot_wireframe(X, Y, Z, color='k')
