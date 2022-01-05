@@ -4,20 +4,20 @@ https://www.youtube.com/watch?v=RJEMDkhVgqQ&list=PLuh62Q4Sv7BUf60vkjePfcOQc8sHxm
 https://scikit-image.org/docs/dev/auto_examples/segmentation/plot_morphsnakes.html
 https://wenku.baidu.com/view/ce52313181c758f5f71f6767.html
 https://blog.csdn.net/cfan927/article/details/108884457
-https://blog.csdn.net/cfan927/article/details/108884457
+https://agustinus.kristia.de/techblog/2016/11/05/levelset-method/
 '''
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import RectBivariateSpline
-
-'''==========snake(active_contour) ========================'''
-
-
 from skimage.filters import sobel
-def edgedetect(img, type='canny'):
+
+'''==========snake(active contour) ========================'''
+
+
+def edgedetect(img):
     edge_img = [sobel(img[:, :, 0]), sobel(img[:, :, 1]),
-            sobel(img[:, :, 2])]
+                sobel(img[:, :, 2])]
     return sum(edge_img)
 
 
@@ -66,6 +66,13 @@ def snake(img, snake, w_edge=0, w_line=1, convergence=0.1, alpha=0.01, beta=0.1,
         ky=2,
         s=0
     )
+
+    plt.ion()
+    plt.figure(num='snake')
+    plt.clf()
+    plt.imshow(cv2.cvtColor(cv2.imread('./data/IMG16.jpg'), cv2.COLOR_BGR2RGB))
+    plt.pause(0.1)
+
     for i in range(max_iterations):
         fx = intp(x, y, dx=1, grid=False)  # 求偏导 x方向
         fy = intp(x, y, dy=1, grid=False)  # 求偏导 y方向
@@ -87,28 +94,91 @@ def snake(img, snake, w_edge=0, w_line=1, convergence=0.1, alpha=0.01, beta=0.1,
             dist = np.min(np.max(np.abs(xsave - x[None, :]) + np.abs(ysave - y[None, :]), 1))
             if dist < convergence:
                 break
+
+        plt.clf()
+        plt.imshow(cv2.cvtColor(cv2.imread('./data/IMG16.jpg'), cv2.COLOR_BGR2RGB))
+        plt.plot(x, y, linewidth=2, color='red')
+        plt.pause(0.1)
+    plt.ioff()
+    plt.show()
     return np.stack([y, x], axis=1)
 
 
 from skimage.filters import gaussian
-
-img = cv2.imread('1233.jpg')
+img = cv2.imread('./data/IMG16.jpg')
 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-s = np.linspace(0, 2*np.pi, 400)
-y = 150 + 150*np.sin(s)  # H
-x = 200 + 180*np.cos(s)  # W
+s = np.linspace(0, 2 * np.pi, 400)
+y = 100 + 50 * np.sin(s)  # H
+x = 200 + 100 * np.cos(s)  # W
 points = np.array([y, x]).T
-plt.figure(figsize=(7, 4), num='a origin circle')
-plt.subplot(1, 2, 1)
-plt.imshow(img)
-plt.plot(points[:, 1], points[:, 0], linewidth=2, color='red')
+# plt.figure(figsize=(7, 4), num='snake')
+# plt.subplot(1, 2, 1)
+# plt.title('a origin circle')
+# plt.imshow(img)
+# plt.plot(points[:, 1], points[:, 0], linewidth=2, color='red')
 
-res = snake(gaussian(img, 3, preserve_range=False), points)
+res = snake(gaussian(img, 3, preserve_range=False), points, max_iterations=150)
+# plt.subplot(1, 2, 2)
+# plt.title('after snake')
+# plt.imshow(img)
+# plt.plot(res[:, 1], res[:, 0], linewidth=2, color='red')
+# plt.show()
+
+'''=============level set====================='''
+
+def grad(x, axis=0):
+    grad = np.array(np.gradient(x))
+    norm_grad = np.sqrt(np.sum(np.power(grad, 2), axis=axis))
+    return norm_grad
+
+
+def F(x, axis=0):
+    norm_grad = grad(x, axis)
+    return 1./(1. + norm_grad **2)
+
+
+img = cv2.imread('./data/IMG16.jpg')
+gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+plt.figure(figsize=(7, 4), num='level set')
+plt.subplot(1, 2, 1)
+plt.title('origin image')
+plt.imshow(gray_img, cmap='gray')
+
+# 图像平滑与导数计算
+gray_img = gray_img - np.mean(gray_img)
+gray_img = cv2.GaussianBlur(gray_img, ksize=(3, 3), sigmaX=0, sigmaY=0)
 plt.subplot(1, 2, 2)
-plt.imshow(img)
-plt.plot(res[:, 1], res[:, 0], linewidth=2, color='red')
+plt.title('grad for the image')
+plt.imshow(F(gray_img), cmap='gray')
 plt.show()
+
+
+def default_phi(x):
+    phi = np.ones(x.shape[:2])
+    phi[50:-50, 50:-50] = -1
+    return phi
+
+dt = 1
+phi = default_phi(gray_img)
+
+plt.ion()
+plt.figure(num='level set processing')
+plt.clf()
+plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+plt.pause(0.5)
+
+for i in range(150):
+    dphi = grad(phi, axis=0)
+    dphi_t = F(gray_img) * dphi
+    phi = phi + dt*dphi_t
+    plt.clf()
+    plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    plt.contour(phi, 0)
+    plt.pause(0.5)
+plt.ioff()
+plt.show()
+
 
 # '''---------插值函数的一些应用小例子----------'''
 # import numpy as np
@@ -147,65 +217,3 @@ plt.show()
 #
 # fig.tight_layout()
 # plt.show()
-
-
-# def threepts2circle(pt1, pt2, pt3):
-#     '''
-#     三点确定一个圆
-#     :param pt1:
-#     :param pt2:
-#     :param pt3:
-#     :return: 圆心坐标和半径 h, w, r
-#     '''
-#     [x1, y1], [x2, y2], [x3, y3] = pt1, pt2, pt3
-#     a = x1 - x2
-#     b = y1 - y2
-#     c = x1 - x3
-#     d = y1 - y3
-#     e = ((np.power(x1, 2) - np.power(x2, 2)) - (np.power(y2, 2) - np.power(y1, 2))) / 2
-#     f = ((np.power(x1, 2) - np.power(x3, 2)) - (np.power(y3, 2) - np.power(y1, 2))) / 2
-#     try:
-#         h = -(d * e - b * f) / (b * c - a * d)
-#         w = -(a * f - c * e) / (b * c - a * d)
-#         r = np.sqrt(np.power(x1 - h, 2) + np.power(y1 - w, 2))
-#         return h, w, r
-#     except:
-#         print('something error in function threepts2circle')
-#
-#
-# def circumcircle(points):
-#     '''
-#     找多个点的最小覆盖圆
-#     :param points: list数据 [h, w]
-#     :return: 最小覆盖圆的圆心坐标和半径
-#     '''
-#     center_h, center_w, r = 0, 0, 0
-#     past_points = list()
-#     for pi in points:
-#         if past_points < 2:
-#             past_points.append(pi)
-#         elif past_points == 2:
-#             center_h = int(past_points[0][0] + past_points[1][0]) / 2
-#             center_w = int(past_points[1][0] + past_points[1][1]) / 2
-#             r = int(np.sqrt(
-#                 np.power(past_points[0][0] - past_points[1][0], 2) + np.power(past_points[0][1] - past_points[1][1],
-#                                                                               2)))
-#         else:
-#             # 如果现有最小覆盖圆不包含当前点pt，需要更新最小覆盖圆的坐标等
-#             if np.sqrt(np.power(pi[0] - center_h, 2) + np.power(pi[1] - center_w, 2)) > r:
-#                 # 找一个新圆
-#                 ncenter_h = int(past_points[0][0] + pi[0]) / 2
-#                 ncenter_w = int(past_points[0][1] + pi[1]) / 2
-#                 nr = int(np.sqrt(np.power(past_points[0][0] - pi[0], 2) + np.power(past_points[0][1] - pi[1], 2)))
-#                 pj = None
-#                 for pj in past_points:
-#                     if np.sqrt(np.power(pj[0] - ncenter_h, 2) + np.power(pj[1] - ncenter_w, 2)) > nr:
-#                         ncenter_h = int(pj[0] + pi[0]) / 2
-#                         ncenter_w = int(pj[1] + pi[1]) / 2
-#                         nr = int(np.sqrt(np.power(pj[0] - pi[0], 2) + np.power(pj[1] - pi[1], 2)))
-#                         pass
-#                 for pk in past_points:
-#                     if np.sqrt(np.power(pk[0] - ncenter_h, 2) + np.power(pk[1] - ncenter_w, 2)) > nr:
-#                         center_h, center_w, r = threepts2circle(pi, pj, pk)
-#                         pass
-#     return center_h, center_w, r
