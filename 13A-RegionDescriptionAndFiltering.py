@@ -2,11 +2,13 @@
 reference:https://www.youtube.com/watch?v=_kwZj-EB1OU&list=PLuh62Q4Sv7BUf60vkjePfcOQc8sHxmnDX&index=16
 '''
 
-
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+
 '''===============distance Transform======================'''
+
+
 # reference:https://blog.csdn.net/a8039974/article/details/78931047
 def distancetransform(binary_img):
     '''
@@ -21,11 +23,11 @@ def distancetransform(binary_img):
     kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
     inter_list = list()
     uninter_list = list()
-    for h in range(1, H-2):
-        for w in range(1, W-2):
+    for h in range(1, H - 2):
+        for w in range(1, W - 2):
             if binary_img[h][w] == 255:
                 # 计算图像中所有的内部点和非内部点，点集分别为inter_list uninter_list
-                if np.sum(binary_img[h-1:h+2, w-1:w+2]*kernel) == 5*255:
+                if np.sum(binary_img[h - 1:h + 2, w - 1:w + 2] * kernel) == 5 * 255:
                     inter_list.append([h, w])
                 else:
                     uninter_list.append([h, w])
@@ -40,7 +42,7 @@ def distancetransform(binary_img):
     [b1, b2] = np.meshgrid(inter_y, uninter_y)
     x_power = np.power((a1 - a2), 2)
     y_power = np.power((b1 - b2), 2)
-    res = np.min(np.sqrt((x_power+y_power)), axis=0)
+    res = np.min(np.sqrt((x_power + y_power)), axis=0)
     # 计算res中的最大最小值Max, Min
     min_ = np.min(res)
     max_ = np.max(res)
@@ -48,7 +50,7 @@ def distancetransform(binary_img):
     res_img = binary_img.copy()
     # 对于每一个内部点，转换后的灰度值G计算
     for i in range(len(inter_list)):
-        res_img[inter_list[i][0], inter_list[i][1]] = ((res[i]-min_)/(max_-min_))*255
+        res_img[inter_list[i][0], inter_list[i][1]] = ((res[i] - min_) / (max_ - min_)) * 255
 
     # 边缘点黑化
     for i in range(len(uninter_list)):
