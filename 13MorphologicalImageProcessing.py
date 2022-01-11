@@ -165,3 +165,171 @@ plt.subplot(2, 2, 4)
 plt.title('closing')
 plt.imshow(cimg, cmap='gray')
 plt.show()
+
+
+'''====分水岭算法========='''
+
+##########################!!!!有问题待解决
+
+def dilate_generate(n, f, ksize, g):
+    '''
+    重建开操作
+    :param n:
+    :param f: 腐蚀后的二值图
+    :param ksize: 核
+    :param g: 腐蚀前的二值图
+    :return:
+    '''
+    if n == 0:
+        return f
+    if n == 1:
+        return np.min((dilate(f, ksize, ktype='ones'), g), axis=0)
+    return dilate_generate(1, dilate_generate(n-1, f, ksize, g), ksize, g)
+
+
+def erosion_generate(n, f, ksize, g):
+    '''
+    重建闭操作
+    :param n:
+    :param f:
+    :param ksize:
+    :param g:
+    :return:
+    '''
+    if n == 0:
+        return f
+    if n == 1:
+        return np.max((erosion(f, ksize, ktype='ones'), g), axis=0)
+    return erosion_generate(1, erosion_generate(n-1, f, ksize, g), ksize, g)
+
+
+def imreconstruce(img, ksize, mode='opening'):
+    '''
+    图像重建 reference：https://blog.csdn.net/csdn_yi_e/article/details/82987904
+    :param img:
+    :param ksize:
+    :param mode:
+    :return:
+    '''
+    bImg = binaryImg(img, threshold=200)
+
+    if mode == 'opening':  # 重建开操作
+        erosion_img = erosion(bImg, ksize=ksize, ktype='cross')  #腐蚀后的图片
+        while True:
+            new = dilate_generate(1, erosion_img, ksize, bImg)
+            if (new == erosion_img).all():
+                return erosion_img
+            erosion_img = new
+
+    elif mode == 'closing':  # 重建闭操作
+        dilate_img = dilate(bImg, ksize=ksize)
+        while True:
+            new = erosion_generate(1, dilate_img, ksize, bImg)
+            if (new == dilate_img).all():
+                return dilate_img
+            dilate_img = new
+    else:
+        print('something wrong')
+        return 0
+
+
+def watershed(img):
+    pass
+
+
+# import cv2
+# import numpy as np
+# from matplotlib import pyplot as plt
+#
+# calculator = cv2.imread('./1233.jpg')
+# plt.figure(num='some operations based on erosion& dilate', figsize=(7, 7))
+# plt.subplot(2, 2, 1)
+# plt.title('origin image')
+# plt.imshow(cv2.cvtColor(calculator, cv2.COLOR_BGR2RGB))
+#
+# plt.subplot(2, 2, 2)
+# plt.title('erosion image')
+# plt.imshow(erosion(binaryImg(calculator, threshold=200), ksize=3, ktype='cross'), cmap='gray')
+#
+# res1 = imreconstruce(calculator, ksize=3, mode='opening')
+# plt.subplot(2, 2, 3)
+# plt.title('opening image')
+# plt.imshow(res1, cmap='gray')
+#
+# kernel = np.ones((3, 3), np.uint8)
+# sure_bg = cv2.dilate(res1, kernel, iterations=3)
+# dist_transform = cv2.distanceTransform(np.array(res1*255, dtype=np.uint8), 1, 5)
+# ret, sure_fg = cv2.threshold(dist_transform, 0.7*dist_transform.max(), 255, 0)
+# sure_fg = np.uint8(sure_fg)
+# sure_bg = np.uint8(sure_bg)
+# unknown = cv2.subtract(sure_bg, sure_fg)
+# ret, markers1 = cv2.connectedComponents(sure_fg)
+#
+# markers = markers1 + 1
+# markers[unknown == 255] = 0
+# markers3 = cv2.watershed(calculator, markers)
+# calculator[markers3 == -1] = [0, 0, 255]
+# plt.subplot(2, 2, 4)
+# plt.title('watershed')
+# plt.imshow(cv2.cvtColor(calculator, cv2.COLOR_BGR2RGB))
+# # res1 = imreconstruce(calculator, ksize=3, mode='closing')
+# # plt.subplot(2, 2, 4)
+# # plt.title('closing image')
+# # plt.imshow(res1, cmap='gray')
+# plt.show()
+
+src = cv2.imread('./1233.jpg')
+img = src.copy()
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+
+kernel = np.ones((3, 3), np.uint8)
+opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=2)
+
+sure_bg = cv2.dilate(opening, kernel, iterations=3)
+dist_transform = cv2.distanceTransform(opening, 1, 5)
+ret, sure_fg = cv2.threshold(dist_transform, 0.5*dist_transform.max(), 255, 0)
+sure_fg = np.uint8(sure_fg)
+unknown = cv2.subtract(sure_bg, sure_fg)
+
+ret, markers1 = cv2.connectedComponents(sure_fg)
+markers = markers1 + 1
+markers[unknown == 255] = 0
+
+markers3 = cv2.watershed(img, markers)
+img[markers3 == -1] = [0, 0, 255]
+
+plt.subplot(241)
+plt.imshow(cv2.cvtColor(src, cv2.COLOR_BGR2RGB))
+plt.title('Original')
+plt.axis('off')
+plt.subplot(242)
+plt.imshow(thresh, cmap='gray')
+plt.title('Threshold')
+plt.axis('off')
+plt.subplot(243)
+plt.imshow(sure_bg, cmap='gray')
+plt.title('Dilate')
+plt.axis('off')
+plt.subplot(244)
+plt.imshow(dist_transform, cmap='gray')
+plt.title('Dist Transform')
+plt.axis('off')
+plt.subplot(245)
+plt.imshow(sure_fg, cmap='gray')
+plt.title('Threshold')
+plt.axis('off')
+plt.subplot(246)
+plt.imshow(unknown, cmap='gray')
+plt.title('Unknow')
+plt.axis('off')
+plt.subplot(247)
+plt.imshow(np.abs(markers), cmap='jet')
+plt.title('Markers')
+plt.axis('off')
+plt.subplot(248)
+plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+plt.title('Result')
+plt.axis('off')
+
+plt.show()
