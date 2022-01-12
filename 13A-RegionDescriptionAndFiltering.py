@@ -58,7 +58,7 @@ def distancetransform(binary_img):
     return res_img
 
 
-img = cv2.imread('./apple.jpg')
+img = cv2.imread('./data/IMG18.jpg')
 gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 _, binary_img = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY)
 binary_img = 255 - binary_img
@@ -167,7 +167,7 @@ def K3M(binary_img):
     return binary_img
 
 
-img = cv2.imread('./9.jpg')
+img = cv2.imread('./data/IMG19.jpg')
 gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 _, binary_img = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY)
 binary_img = 255 - binary_img
