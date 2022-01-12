@@ -84,3 +84,105 @@ plt.subplot(2, 2, 4)
 plt.title('distTrans from myself')
 plt.imshow(res, cmap='gray')
 plt.show()
+
+
+'''====================骨骼提取算法=================='''
+
+def f1(img, border_list, border_kernel, threshold_list):
+    border_list_ = border_list.copy()
+    for i in range(len(border_list)):
+        weight = np.sum(
+            img[border_list[i][0] - 1:border_list[i][0] + 2, border_list[i][1] - 1:border_list[i][1] + 2]
+            * border_kernel/255)
+        if weight in threshold_list:
+            border_list_.remove(border_list[i])
+            img[border_list[i][0], border_list[i][1]] = 0
+    border_list = border_list_.copy()
+    return img, border_list
+
+
+def make_border(img, border_kernel):
+    img = img/255.
+    [H, W] = img.shape
+    border_list = []
+    A0 = [3, 6, 7, 12, 14, 15, 24, 28, 30, 31, 48, 56, 60, 62, 63, 96,
+          112, 120, 124, 126, 127, 129, 131, 135, 143, 159, 191, 192,
+          193, 195, 199, 207, 223, 224, 225, 227, 231, 239, 240, 241,
+          243, 247, 248, 249, 251, 252, 253, 254]
+
+    for h in range(1, H - 2):
+        for w in range(1, W - 2):
+            if img[h, w] == 1.:
+                weight = np.sum(img[h - 1:h + 2, w - 1:w + 2] * border_kernel)
+                if weight in A0:
+                    border_list.append([h, w])
+
+    return border_list
+
+def K3M(binary_img):
+    '''
+    图像的骨骼提取算法K3M，参考文献http://matwbn.icm.edu.pl/ksiazki/amc/amc20/amc2029.pdf
+    :param binary_img: 设定背景为0 前景为255
+    :return: 只有骨骼信息的二值图
+    '''
+    [H, W] = binary_img.shape
+
+    # 获取border pixels，border pixel的8个邻居必定不全为白
+    border_kernel = np.ones(shape=(3, 3))
+    border_kernel = np.array([[128, 1, 2], [64, 0, 4], [32, 16, 8]])
+    border_list = make_border(binary_img, border_kernel)
+
+    while True:
+        old_border_list = border_list.copy()
+        A1 = [7, 14, 28, 56, 112, 131, 193, 224]
+        binary_img, border_list = f1(binary_img, border_list, border_kernel, A1)
+
+        A2 = [7, 14, 15, 28, 30, 56, 60, 112, 120, 131, 135, 193, 195, 224, 225, 240]
+        binary_img, border_list = f1(binary_img, border_list, border_kernel, A2)
+
+        A3 = [7, 14, 15, 28, 30, 31, 56, 60, 62, 112, 120, 124, 131, 135,
+              143, 193, 195, 199, 224, 225, 227, 240, 241, 248]
+        binary_img, border_list = f1(binary_img, border_list, border_kernel, A3)
+
+        A4 = [7, 14, 15, 28, 30, 31, 56, 60, 62, 63, 112, 120,
+                124, 126, 131, 135, 143, 159, 193, 195, 199, 207,
+                224, 225, 227, 231, 240, 241, 243, 248, 249, 252]
+        binary_img, border_list = f1(binary_img, border_list, border_kernel, A4)
+
+        A5 = [7, 14, 15, 28, 30, 31, 56, 60, 62, 63, 112, 120,
+                124, 126, 131, 135, 143, 159, 191, 193, 195, 199,
+                207, 224, 225, 227, 231, 239, 240, 241, 243, 248,
+                249, 251, 252, 254]
+        binary_img, border_list = f1(binary_img, border_list, border_kernel, A5)
+        border_list = make_border(binary_img, border_kernel)
+        if len(old_border_list) == len(border_list):
+            break
+
+    A1pix = [3, 6, 7, 12, 14, 15, 24, 28, 30, 31, 48, 56,
+             60, 62, 63, 96, 112, 120, 124, 126, 127, 129, 131,
+             135, 143, 159, 191, 192, 193, 195, 199, 207, 223,
+             224, 225, 227, 231, 239, 240, 241, 243, 247, 248,
+             249, 251, 252, 253, 254]
+    binary_img, border_list = f1(binary_img, border_list, border_kernel, A1pix)
+    return binary_img
+
+
+img = cv2.imread('./9.jpg')
+gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+_, binary_img = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY)
+binary_img = 255 - binary_img
+
+plt.figure(figsize=(7, 5))
+plt.subplot(1, 3, 1)
+plt.title('origin img')
+plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+
+plt.subplot(1, 3, 2)
+plt.title('binary img')
+plt.imshow(binary_img, cmap='gray')
+
+skele = K3M(binary_img)
+plt.subplot(1, 3, 3)
+plt.title('K3M')
+plt.imshow(skele, cmap='gray')
+plt.show()
