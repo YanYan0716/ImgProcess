@@ -2,6 +2,8 @@
 reference:
 https://blog.csdn.net/zddblog/article/details/7521424
 https://blog.csdn.net/hit2015spring/article/details/52972890
+https://blog.csdn.net/hit2015spring/article/details/52895367?spm=1001.2014.3001.5502
+https://wenku.baidu.com/view/ebbf1540ad51f01dc381f176.html
 '''
 
 import cv2
@@ -9,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+SIFT_FIXPT_SCALE = 1
 def GenerateGaussianFilter(sigma):
     '''
     生成标准差为sigma的高斯核，高斯核的大小遵循 6*sigma 原则
@@ -58,6 +61,14 @@ def GaussianBlur(img, sigma):
 def downsample(img):
     img = img[::2, ::2]
     return img
+
+
+def earn_sigma(sigma0, S):
+    k = np.power(2, 1/3)
+    sigma_list = list()
+    for i in range(0, S):
+        sigma_list.append(np.sqrt(np.power(np.power(k, i)*sigma0, 2)-np.power(np.power(k, i-1)*sigma0, 2)))
+    return sigma_list
 
 
 def diff1(x1, x2, h):
@@ -111,9 +122,9 @@ def adjustLocalExtrema(DOG, octv, layer, loc_h, loc_w, nOctaveLayers, contrastTh
     '''
     # print(octv, layer)
     SIFT_MAX_INTTERP_STEPS = 5
-    INT_MAX = 10
+    INT_MAX = np.Inf
     SIFT_FIXPT_SCALE = 1.
-    h = 1 / (255 * SIFT_FIXPT_SCALE)
+    # h = 1 / (255 * SIFT_FIXPT_SCALE)
 
     before = DOG[octv][layer - 1]
     target = DOG[octv][layer]
@@ -121,6 +132,7 @@ def adjustLocalExtrema(DOG, octv, layer, loc_h, loc_w, nOctaveLayers, contrastTh
     after = DOG[octv][layer + 1]
     x, y = loc_w, loc_h
     xc, xr, xi = 0, 0, 0
+    # 第二轮筛选
     for i in range(SIFT_MAX_INTTERP_STEPS):
         diff_x = diff1(target[y, x - 1], target[y, x + 1], h)
         diff_y = diff1(target[y - 1, x], target[y + 1, x], h)
@@ -176,17 +188,18 @@ def adjustLocalExtrema(DOG, octv, layer, loc_h, loc_w, nOctaveLayers, contrastTh
 
     if det <= 0 or tr * tr * edgeThreshold >= (edgeThreshold + 1) * (edgeThreshold + 1) * det:
         return False
-    return True
+
+    return x+int(np.round(xc)), y + int(np.round(xr))
 
 
-def GaussianPyramid(img, n=3, s=3, sigma=0.6):
+def GaussianPyramid(img, n=3, s=3, sigma=1.6):
     img = np.array(img, dtype=np.float32)
     GP = list()  # 高斯金字塔
     GP_interval_num = s + 3
     DOG = list()  # 高斯差分金字塔(DOG)
     DOG_interval_num = s + 2
 
-    sigma_list = np.arange(1, GP_interval_num + 1) * sigma
+    sigma_list = earn_sigma(sigma, GP_interval_num)
 
     # 多尺度空间的高斯金字塔的构建
     for i in range(n):
@@ -202,7 +215,7 @@ def GaussianPyramid(img, n=3, s=3, sigma=0.6):
     for i in range(n):
         octave = list()
         for le in range(DOG_interval_num):
-            diff = GP[i][le] - GP[i][le + 1]
+            diff = np.clip(GP[i][le+1] - GP[i][le], 0, 255)
             octave.append(diff)
         octave = np.array(octave)
         DOG.append(octave)
@@ -225,10 +238,11 @@ def GaussianPyramid(img, n=3, s=3, sigma=0.6):
                                     after[sh - 1:sh + 2, sw - 1:sw + 2]]
                     min_neighbor = np.min(all_neighbor)
                     max_neighbor = np.max(all_neighbor)
-                    if target[sh, sw] == min_neighbor and adjustLocalExtrema(DOG, i, j+1, sh, sw, 5, 0.04, 10, 1.):
+                    result = adjustLocalExtrema(DOG, i, j+1, sh, sw, 5, 0.04, 10, 1.)
+                    if target[sh, sw] == min_neighbor and result != False:
                         patten[sh, sw] = -1
-                        octave_position.append([sh, sw])
-                    elif target[sh, sw] == max_neighbor and adjustLocalExtrema(DOG, i, j+1, sh, sw, 5, 0.04, 10, 1.):
+                        # octave_position.append([sh, sw])
+                    elif target[sh, sw] == max_neighbor and result != False:
                         patten[sh, sw] = 1
                         octave_position.append([sh, sw])
                     else:
@@ -236,41 +250,84 @@ def GaussianPyramid(img, n=3, s=3, sigma=0.6):
             octave.append(patten)
             extreme_position.append(np.array(octave_position))
         octave = np.array(octave)
+    return GP, DOG, extreme_position
 
-    return GP, extreme_position
 
-
-figure = plt.figure(num='sift algorithm', figsize=(7, 7))
-img = cv2.imread('./img.jpg')
-plt.subplot(3, 3, 1)
+figure = plt.figure(num='sift algorithm-1', figsize=(7, 4))
+img = cv2.imread('./apple.jpg')
+plt.subplot(1, 3, 1)
+plt.xticks([])
+plt.yticks([])
 plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
 gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-plt.subplot(3, 3, 2)
+plt.subplot(1, 3, 2)
+plt.xticks([])
+plt.yticks([])
 plt.imshow(gray_img, cmap='gray')
 
-blur_img = GaussianBlur(gray_img, 0.6)
-plt.subplot(3, 3, 3)
+blur_img = GaussianBlur(gray_img, 1.6)
+plt.subplot(1, 3, 3)
+plt.xticks([])
+plt.yticks([])
 plt.imshow(blur_img, cmap='gray')
-
-GP, extreme = GaussianPyramid(blur_img)
-for i in range(3):
-    plt.subplot(3, 3, 4 + i)
-    plt.imshow(GP[i][0], cmap='gray')
-
-for j in range(3):
-    plt.subplot(3, 3, 7 + j)
-    plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-    plt.scatter(extreme[j][:, 1], extreme[j][:, 0], marker='+', color='y')
-    # print(len(extreme))
-
-
 plt.show()
 
-# figure = plt.figure(num='sift re', figsize=(7, 7))
-# img = cv2.imread('./img.jpg')
-# plt.subplot(3, 3, 1)
-# plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+figure = plt.figure(num='sift algorithm-2', figsize=(10, 7))
+GP, DOG, extreme = GaussianPyramid(blur_img)
+print(len(extreme))
+print(extreme[0].shape)
+index = 0
+for i in range(3):
+    for j in range(GP[0].shape[0]):
+        index += 1
+        plt.subplot(3, 6, index)
+        plt.xticks([])
+        plt.yticks([])
+        plt.imshow(GP[i][j], cmap='gray')
+plt.show()
+
+figure = plt.figure(num='sift algorithm-3', figsize=(10, 7))
+index = 0
+for i in range(3):
+    for j in range(DOG[0].shape[0]):
+        index += 1
+        plt.subplot(3, 5, index)
+        plt.xticks([])
+        plt.yticks([])
+        plt.imshow(DOG[i][j], cmap='gray')
+plt.show()
+#
+# figure = plt.figure(num='sift algorithm-4', figsize=(10, 7))
+# for j in range(3):
+#     plt.subplot(1, 3, j+1)
+#     plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+#     plt.xticks([])
+#     plt.yticks([])
+#     plt.scatter(extreme[j][:, 1], extreme[j][:, 0], marker='+', color='y')
+#
+# plt.show()
+
+
+# sift in opencv
+import numpy as np
+import cv2
+from matplotlib import pyplot as plt
+
+imgname1 = './apple.jpg'
+
+sift = cv2.SIFT_create()
+img1 = cv2.imread(imgname1)
+gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)  # 灰度处理图像
+kp1, des1 = sift.detectAndCompute(img1, None)  # des是描述
+
+img3 = cv2.drawKeypoints(img1, kp1, img1, color=(0, 255, 0))  # 画出特征点，并显示为红色圆圈
+cv2.imshow("point", img3)  # 拼接显示为gray
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+
+
 '''
 
 
@@ -400,6 +457,4 @@ if __name__ == '__main__':
 # cv2.imshow('res', transimg)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
-
-
 '''
