@@ -1,7 +1,6 @@
 
 '''
-reference:
-
+reference:https://www.youtube.com/watch?v=EiD0PuL2yhk&list=PLuh62Q4Sv7BUf60vkjePfcOQc8sHxmnDX&index=18
 '''
 import cv2
 import numpy as np
@@ -83,7 +82,7 @@ def Huffman(img):
     return encoding
 
 
-img = cv2.imread('./img.jpg')
+img = cv2.imread('./data/IMG18.jpg')
 gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 encode_str = Huffman(gray_img)
 for (pixel, code) in enumerate(encode_str):
