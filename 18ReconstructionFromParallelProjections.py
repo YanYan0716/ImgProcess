@@ -26,6 +26,7 @@ def RadonTransform_example(img, angle):
     for j in range(H):
         result_img[j, :] = np.array(result_num)
     result_img = result_img*255/(np.max(result_img)-np.min(result_img))
+    result_img = cv2.warpAffine(result_img, M, (W, H))
     return result_num, result_img
 
 
@@ -44,12 +45,17 @@ def RadonTransform(img, theta):
         M = cv2.getRotationMatrix2D(rotate_center, angle, 1.0)
         new_img = cv2.warpAffine(img, M, (W, H))  # 图像的旋转
         # 获得res
+        res = np.zeros(shape=img.shape)
+        result_num = list()
+        for i in range(W):
+            result_num.append(np.sum(new_img[:, i]))
+        for j in range(H):
+            res[j, :] = np.array(result_num)
+        res = res * 255 / (np.max(res) - np.min(res))
+        new_res = cv2.warpAffine(res, M, (W, H))  # 图像的旋转
+        result += new_res
 
 
-        [new_h, new_w] = new_img.shape
-        result += (new_img / 255.)
-    result = np.array(result)
-    result = result * 255. / (np.max(result) - np.min(result))
     return result
 
 
