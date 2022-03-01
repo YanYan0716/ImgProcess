@@ -5,7 +5,6 @@ reference:https://www.youtube.com/watch?v=ZgcD4C-4u0Q&list=PLuh62Q4Sv7BUf60vkjeP
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-from scipy import ndimage
 
 
 def RadonTransform_example(img, angle):
@@ -45,10 +44,7 @@ def RadonTransform(img):
     for angle in angles:
         M = cv2.getRotationMatrix2D(rotate_center, angle, 1.0).astype(np.float32)
         new_img = cv2.warpAffine(img, M, (W, H))  # 图像的旋转
-        try:
-            result[:, np.int(angle*H/180)] = np.sum(new_img, axis=0)
-        except:
-            pass
+        result[:, np.int(angle*H/180)-1] = np.sum(new_img, axis=0)
     return result
 
 
