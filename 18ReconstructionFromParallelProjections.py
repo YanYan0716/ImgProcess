@@ -5,6 +5,7 @@ reference:https://www.youtube.com/watch?v=ZgcD4C-4u0Q&list=PLuh62Q4Sv7BUf60vkjeP
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+from scipy import ndimage
 
 
 def RadonTransform_example(img, angle):
@@ -26,36 +27,49 @@ def RadonTransform_example(img, angle):
     for j in range(H):
         result_img[j, :] = np.array(result_num)
     result_img = result_img*255/(np.max(result_img)-np.min(result_img))
-    result_img = cv2.warpAffine(result_img, M, (W, H))
     return result_num, result_img
 
 
-def RadonTransform(img, theta):
+def RadonTransform(img):
     '''
-
+    中文名为雷登变换 reference:https://blog.csdn.net/jasneik/article/details/115099488
     :param img:
     :param theta:
     :return:
     '''
     [H, W] = img.shape
     rotate_center = (W / 2, H / 2)
-    result = np.zeros(shape=img.shape)
+    result = np.zeros(shape=img.shape, dtype=np.float32)
+    angles = np.linspace(0, 180, H)
 
-    for angle in range(0, 180, theta):
-        M = cv2.getRotationMatrix2D(rotate_center, angle, 1.0)
+    for angle in angles:
+        M = cv2.getRotationMatrix2D(rotate_center, angle, 1.0).astype(np.float32)
         new_img = cv2.warpAffine(img, M, (W, H))  # 图像的旋转
-        # 获得res
-        res = np.zeros(shape=img.shape)
-        result_num = list()
+        try:
+            result[:, np.int(angle*H/180)] = np.sum(new_img, axis=0)
+        except:
+            pass
+    return result
+
+
+def InvertRadonTransform(RadonImg):
+    '''
+    反雷登变换 reference:https://blog.csdn.net/jasneik/article/details/115099488
+    :param RadonImg:雷登变换后的图像
+    :return:
+    '''
+    [H, W] = RadonImg.shape
+    rotate_center = (W / 2, H / 2)
+    result = np.zeros(shape=RadonImg.shape, dtype=np.float32)
+    angles = np.linspace(0, 180, H)
+
+    for angle in angles:
+        img_ = np.zeros(shape=RadonImg.shape, dtype=np.float) #生成的中间图像
         for i in range(W):
-            result_num.append(np.sum(new_img[:, i]))
-        for j in range(H):
-            res[j, :] = np.array(result_num)
-        res = res * 255 / (np.max(res) - np.min(res))
-        new_res = cv2.warpAffine(res, M, (W, H))  # 图像的旋转
-        result += new_res
-
-
+            img_[i, :] = RadonImg[:, np.int(angle*H/180)-1]
+        M = cv2.getRotationMatrix2D(rotate_center, -angle, 1.0).astype(np.float32)
+        img_ = cv2.warpAffine(img_, M, (W, H))
+        result += img_
     return result
 
 
@@ -83,9 +97,17 @@ plt.subplot(2, 3, 6)
 plt.title('radon transform from H')
 plt.imshow(np.array(result_img, dtype=np.uint), cmap='gray')
 
-# result = RadonTransform(gray_img, 1)
-# plt.subplot(2, 3, 4)
-# plt.title('123')
-# plt.imshow(np.array(result, dtype=np.uint), cmap='gray')
+result = RadonTransform(gray_img)
+result = result*255 / (np.max(result)-np.min(result))
+plt.subplot(2, 3, 4)
+plt.title('radon transform from original')
+plt.imshow(np.array(result, dtype=np.uint), cmap='gray')
+plt.show()
 
+
+inverse_result = InvertRadonTransform(result)
+inverse_result = inverse_result*255 / (np.max(inverse_result)-np.min(inverse_result))
+plt.subplot()
+plt.title('invert radon transform')
+plt.imshow(np.array(inverse_result, dtype=np.uint), cmap='gray')
 plt.show()
