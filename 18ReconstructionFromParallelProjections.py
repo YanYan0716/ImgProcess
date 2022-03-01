@@ -107,3 +107,7 @@ plt.subplot()
 plt.title('invert radon transform')
 plt.imshow(np.array(inverse_result, dtype=np.uint), cmap='gray')
 plt.show()
+
+
+
+'''缺少反投影部分 https://blog.csdn.net/jasneik/article/details/115099488中有参考'''
