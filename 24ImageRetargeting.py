@@ -115,8 +115,6 @@ def InitOff(mask):
                 r_row = r_row if (r_row+i) < r else r-r_row
 
 
-
-
 def PatchMatch(img, mask):
     '''
     reference:https://www.jb51.net/article/210277.htm
